@@ -17,7 +17,7 @@
     <header class="brand">
       <span class="brand-emoji" aria-hidden="true">🐱</span>
       <h1 id="start-title" data-game-name>Cat Logic</h1>
-      <p class="tagline">Encontre os gatos escondidos usando só a lógica.</p>
+    <p class="tagline">Encontre vários gatos usando as pistas de linhas, colunas e cores.</p>
     </header>
 
     <div id="continue-banner" class="continue-banner" hidden>
@@ -61,11 +61,14 @@
       <div id="board" role="grid" aria-label="Tabuleiro do jogo"></div>
     </div>
 
+    <div id="color-legend" class="color-legend" aria-label="Regra das cores"></div>
+
     <p id="hint-message" class="hint-message" role="status" aria-live="polite" hidden></p>
 
     <footer class="game-toolbar">
       <button type="button" id="btn-undo" class="btn btn-icon" aria-label="Desfazer">↶ Desfazer</button>
       <button type="button" id="btn-hint" class="btn btn-icon" aria-label="Pedir dica">💡 Dica</button>
+      <button type="button" id="btn-mark-mode" class="btn btn-icon mark-mode" aria-pressed="false" aria-label="Ativar modo de marcar bandeiras">🚩 Marcar bandeira</button>
       <button type="button" id="btn-restart" class="btn btn-icon" aria-label="Reiniciar partida">⟲ Reiniciar</button>
     </footer>
   </section>
@@ -77,12 +80,12 @@
       <ul class="rules-list">
         <li>Existe exatamente <strong>um gato por linha</strong>.</li>
         <li>Existe exatamente <strong>um gato por coluna</strong>.</li>
-        <li>Existe exatamente <strong>um gato por região colorida</strong>.</li>
+        <li>Existe exatamente <strong>um gato em cada cor</strong>: se uma cor aparece em cinco casas, o gato está em uma dessas cinco casas.</li>
         <li>Nenhum gato pode ficar <strong>vizinho de outro</strong>, nem na diagonal.</li>
       </ul>
-      <p>Toque numa célula para alternar: vazia → 🟢 sinal verde (gato confirmado) → ⚠️ placa de advertência (você acha que aqui não tem gato) → vazia.</p>
-      <p>A placa de advertência é só uma anotação sua, como as bandeirinhas do Batalha Naval — o jogo não coloca nenhuma sozinho. Use pra marcar onde você já deduziu que não pode ter gato; isso é o que ajuda a raciocinar.</p>
-      <p>Clique com o botão direito (ou mantenha o dedo pressionado numa célula, no celular) para colocar ou tirar a placa de advertência direto, sem precisar passar pelo sinal verde.</p>
+        <p>Toque numa célula para alternar: vazia → 🟢 gato confirmado → 🚩 bandeirinha (você acha que aqui não tem gato) → vazia.</p>
+        <p>A bandeirinha é só uma anotação sua, como no Batalha Naval — o jogo não coloca nenhuma sozinho. Use-a para marcar onde você já deduziu que não pode haver gato e evitar clicar ali de novo.</p>
+        <p>Clique com o botão direito (ou mantenha o dedo pressionado numa célula, no celular) para colocar ou tirar a bandeirinha diretamente, sem precisar passar pelo gato.</p>
       <p><strong>Atenção:</strong> se você confirmar um gato na mesma linha, coluna, região ou vizinho de outro, ele vira sinal vermelho e o jogo termina na hora. Pense bem antes de marcar!</p>
       <button type="button" class="btn btn-primary modal-close">Entendi</button>
     </div>

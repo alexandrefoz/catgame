@@ -16,14 +16,17 @@ nome, arte ou código de nenhum jogo específico):
 
 1. Existe exatamente **um gato por linha**.
 2. Existe exatamente **um gato por coluna**.
-3. Existe exatamente **um gato por região colorida**.
+3. Existe exatamente **um gato por cor/região**. Se uma cor aparece em uma única casa, essa casa obrigatoriamente tem o gato; se aparece em cinco casas, o gato está em uma dessas cinco.
 4. **Nenhum gato pode ser vizinho de outro**, inclusive na diagonal.
 5. O jogador deduz as posições só com essas restrições — todo puzzle gerado tem
    **exatamente uma solução**.
 
-Toque/clique em uma célula para alternar entre: vazia → 🐱 gato → ✕ marcada como
-vazia → vazia. Use as marcações ✕ para anotar onde você já deduziu que não pode
-haver gato.
+Toque/clique em uma célula para alternar entre: vazia → 🐱 gato → 🚩 bandeirinha
+→ vazia. Use as bandeirinhas para anotar onde você já deduziu que não pode haver
+gato e evitar clicar novamente nessas casas. Clique com o botão direito ou mantenha
+o dedo pressionado no celular para colocar/tirar a bandeirinha diretamente. No celular,
+também há um botão **Marcar bandeira** na barra do jogo: ative-o e toque nas casas que
+quer anotar; toque novamente no botão para voltar ao modo de marcar gatos.
 
 **Atenção:** marcar um gato que não é o da solução real termina a partida na hora —
 não dá para continuar depois de um erro. O jogo nunca preenche as marcações ✕
