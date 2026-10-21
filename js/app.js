@@ -1,7 +1,8 @@
 import { generatePuzzle } from "./board-generator.js";
 import {
-  createGameState, setCell, setCellsBatch, undo, checkWin, elapsedMs,
+  createGameState, setCell, undo, checkWin, elapsedMs,
   recordHintUsed, serializeGameState, deserializeGameState, CellState,
+  isCatPlacementCorrect,
 } from "./game-state.js";
 import { getNextHint } from "./hints.js";
 import { getItem, setItem, removeItem } from "./storage.js";
@@ -9,8 +10,8 @@ import { loadStatistics, recordGameStarted, recordGameWon } from "./statistics.j
 import {
   saveCustomImage, loadCustomImage, removeCustomImage, validateImageFile,
 } from "./image-personalization.js";
-import { violatesAdjacency } from "./rules.js";
 import { playCatSuccess, playCatFail, isMuted, toggleMuted } from "./sound.js";
+import { CAT_PRESETS, DEFAULT_SKIN_ID, getSelectedSkin, setSelectedSkin, getPresetById } from "./cat-gallery.js";
 
 export const GAME_NAME = "Cat Logic";
 const SAVE_KEY = "currentGame";
@@ -216,25 +217,41 @@ function renderCellContents() {
     for (let c = 0; c < game.puzzle.size; c++) {
       const btn = cells[r * game.puzzle.size + c];
       const state = game.grid[r][c];
-      btn.classList.toggle("error", errorCells.has(`${r},${c}`));
+      const inConflict = errorCells.has(`${r},${c}`);
+      btn.classList.toggle("error", inConflict);
       btn.innerHTML = "";
       let label = `Linha ${r + 1}, coluna ${c + 1}, região ${game.puzzle.regions[r][c] + 1}. `;
       if (state === CellState.CAT) {
-        if (customCatImageUrl) {
-          const img = document.createElement("img");
-          img.className = "cat-img";
-          img.src = customCatImageUrl;
-          img.alt = "";
-          btn.appendChild(img);
+        if (inConflict) {
+          const marker = document.createElement("span");
+          marker.className = "marker marker-circle marker-circle--danger";
+          btn.appendChild(marker);
         } else {
-          btn.textContent = "🐱";
+          const selectedSkin = getSelectedSkin();
+          const preset = getPresetById(selectedSkin);
+          if (selectedSkin === "photo" && customCatImageUrl) {
+            const img = document.createElement("img");
+            img.className = "cat-img";
+            img.src = customCatImageUrl;
+            img.alt = "";
+            btn.appendChild(img);
+          } else if (preset) {
+            const marker = document.createElement("span");
+            marker.className = "marker marker-skin";
+            marker.innerHTML = preset.svg();
+            btn.appendChild(marker);
+          } else {
+            const marker = document.createElement("span");
+            marker.className = "marker marker-circle marker-circle--ok";
+            btn.appendChild(marker);
+          }
         }
-        label += "Gato marcado.";
+        label += inConflict ? "Sinal vermelho: gato em conflito com outro." : "Sinal verde: gato confirmado.";
       } else if (state === CellState.EMPTY) {
-        const mark = document.createElement("span");
-        mark.className = "mark-empty";
-        btn.appendChild(mark);
-        label += "Marcada como vazia.";
+        const marker = document.createElement("span");
+        marker.className = "marker marker-warning";
+        btn.appendChild(marker);
+        label += "Placa de advertência: aqui não pode haver gato.";
       } else {
         label += "Vazia, sem marcação.";
       }
@@ -243,48 +260,21 @@ function renderCellContents() {
   }
 }
 
+// Uma célula marcada como gato está "errada" se não bater com a solução real — não basta
+// checar se ela conflita com os outros gatos já marcados (ver comentário em
+// game-state.isCatPlacementCorrect: múltiplos subconjuntos parciais podem ser estruturalmente
+// consistentes entre si sem nenhum deles ser a solução de verdade).
 function computeErrorCells() {
   const errors = new Set();
-  const size = game.puzzle.size;
-  const cats = [];
-  for (let r = 0; r < size; r++)
-    for (let c = 0; c < size; c++)
-      if (game.grid[r][c] === CellState.CAT) cats.push([r, c]);
-
-  for (let i = 0; i < cats.length; i++) {
-    for (let j = i + 1; j < cats.length; j++) {
-      const [r1, c1] = cats[i];
-      const [r2, c2] = cats[j];
-      const sameRow = r1 === r2;
-      const sameCol = c1 === c2;
-      const sameRegion = game.puzzle.regions[r1][c1] === game.puzzle.regions[r2][c2];
-      const adjacent = violatesAdjacency(r1, c1, r2, c2);
-      if (sameRow || sameCol || sameRegion || adjacent) {
-        errors.add(`${r1},${c1}`);
-        errors.add(`${r2},${c2}`);
+  const { size, solution } = game.puzzle;
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (game.grid[r][c] === CellState.CAT && solution[r] !== c) {
+        errors.add(`${r},${c}`);
       }
     }
   }
   return errors;
-}
-
-// Verifica se colocar um gato em (r,c) quebra alguma regra em relação aos gatos já marcados
-// pelo jogador (linha, coluna, região ou vizinhança). Usado só para a célula recém-marcada —
-// não precisa varrer conflitos entre pares antigos, pois cada marcação já é checada na hora.
-function placementConflicts(r, c) {
-  const { size, regions } = game.puzzle;
-  for (let rr = 0; rr < size; rr++) {
-    for (let cc = 0; cc < size; cc++) {
-      if (rr === r && cc === c) continue;
-      if (game.grid[rr][cc] !== CellState.CAT) continue;
-      const sameRow = rr === r;
-      const sameCol = cc === c;
-      const sameRegion = regions[rr][cc] === regions[r][c];
-      const adjacent = violatesAdjacency(rr, cc, r, c);
-      if (sameRow || sameCol || sameRegion || adjacent) return true;
-    }
-  }
-  return false;
 }
 
 function triggerPlacedAnimation(r, c) {
@@ -296,30 +286,6 @@ function triggerPlacedAnimation(r, c) {
 
 // Células que um gato em (r,c) elimina pelas regras: mesma linha, mesma coluna, mesma região
 // e as 8 vizinhas. Usado para marcar "✕" automaticamente ao confirmar um gato válido.
-function eliminatedCellsFor(r, c) {
-  const { size, regions } = game.puzzle;
-  const targets = new Set();
-  for (let i = 0; i < size; i++) {
-    targets.add(`${r},${i}`);
-    targets.add(`${i},${c}`);
-  }
-  const regionId = regions[r][c];
-  for (let rr = 0; rr < size; rr++) {
-    for (let cc = 0; cc < size; cc++) {
-      if (regions[rr][cc] === regionId) targets.add(`${rr},${cc}`);
-    }
-  }
-  for (let dr = -1; dr <= 1; dr++) {
-    for (let dc = -1; dc <= 1; dc++) {
-      const rr = r + dr;
-      const cc = c + dc;
-      if (rr >= 0 && rr < size && cc >= 0 && cc < size) targets.add(`${rr},${cc}`);
-    }
-  }
-  targets.delete(`${r},${c}`);
-  return [...targets].map((key) => key.split(",").map(Number));
-}
-
 function handleCellActivate(r, c) {
   if (game.status !== "playing") return;
   if (longPressTriggered) {
@@ -331,27 +297,21 @@ function handleCellActivate(r, c) {
   const current = game.grid[r][c];
   const newState = order[(order.indexOf(current) + 1) % order.length];
 
-  if (newState === CellState.CAT) {
-    const changes = [{ row: r, col: c, newValue: CellState.CAT }];
-    for (const [rr, cc] of eliminatedCellsFor(r, c)) {
-      if (game.grid[rr][cc] === CellState.UNKNOWN) {
-        changes.push({ row: rr, col: cc, newValue: CellState.EMPTY });
-      }
-    }
-    setCellsBatch(game, changes);
-  } else {
-    setCell(game, r, c, newState);
-  }
-
+  setCell(game, r, c, newState);
   afterMove();
 
   if (newState === CellState.CAT) {
+    // A correção é checada SEMPRE contra a solução real (isCatPlacementCorrect), nunca apenas
+    // pela consistência entre os gatos já marcados — ver o comentário em game-state.js para o
+    // porquê isso importa. O jogo NÃO marca "✕" sozinho nas células eliminadas: isso é decisão
+    // e risco do jogador, como marcar um "erro" no Batalha Naval — por pedido explícito.
+    const isCorrect = isCatPlacementCorrect(game, r, c);
     triggerPlacedAnimation(r, c);
-    if (placementConflicts(r, c)) {
+    if (isCorrect) {
+      playCatSuccess();
+    } else {
       playCatFail();
       onGameLost();
-    } else {
-      playCatSuccess();
     }
   }
 }
@@ -535,22 +495,66 @@ el("btn-stats").addEventListener("click", () => {
   openModal(modals.stats);
 });
 
-// ---------- Personalização de imagem ----------
+// ---------- Galeria de gatos + foto personalizada ----------
+// O "skin" selecionado (padrão | um preset da galeria | "photo") decide só a aparência do
+// marcador verde (gato confirmado sem erro); o vermelho de erro nunca é "pintado" com um
+// personagem — continua sendo sempre a bolinha vermelha simples, como sinal universal de erro.
+function buildCatGallery() {
+  const gallery = el("cat-gallery");
+  gallery.innerHTML = "";
+
+  const options = [{ id: DEFAULT_SKIN_ID, name: "Padrão (sinal verde)", svg: null }, ...CAT_PRESETS];
+  for (const option of options) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cat-gallery-option";
+    btn.dataset.skinId = option.id;
+    btn.setAttribute("role", "radio");
+    btn.setAttribute("aria-label", option.name);
+    btn.innerHTML = option.svg
+      ? option.svg()
+      : `<span class="cat-gallery-default-dot" aria-hidden="true"></span>`;
+    btn.addEventListener("click", async () => {
+      setSelectedSkin(option.id);
+      await refreshPersonalizePreview();
+    });
+    gallery.appendChild(btn);
+  }
+}
+
+function highlightSelectedGalleryOption(selectedSkin) {
+  for (const btn of el("cat-gallery").children) {
+    const isSelected = btn.dataset.skinId === selectedSkin;
+    btn.classList.toggle("selected", isSelected);
+    btn.setAttribute("aria-checked", String(isSelected));
+  }
+}
+
 async function refreshPersonalizePreview() {
   const blob = await loadCustomImage();
+  if (customCatImageUrl) {
+    URL.revokeObjectURL(customCatImageUrl);
+    customCatImageUrl = null;
+  }
+  if (blob) customCatImageUrl = URL.createObjectURL(blob);
+
+  const selectedSkin = getSelectedSkin();
   const img = el("personalize-preview-img");
   const placeholder = el("personalize-preview-placeholder");
-  if (blob) {
-    if (customCatImageUrl) URL.revokeObjectURL(customCatImageUrl);
-    customCatImageUrl = URL.createObjectURL(blob);
+
+  if (selectedSkin === "photo" && customCatImageUrl) {
     img.src = customCatImageUrl;
     img.hidden = false;
     placeholder.hidden = true;
+    placeholder.innerHTML = "";
   } else {
-    customCatImageUrl = null;
     img.hidden = true;
+    const preset = getPresetById(selectedSkin);
+    placeholder.innerHTML = preset ? preset.svg() : '<span class="marker-circle marker-circle--ok"></span>';
     placeholder.hidden = false;
   }
+
+  highlightSelectedGalleryOption(selectedSkin === "photo" && !customCatImageUrl ? DEFAULT_SKIN_ID : selectedSkin);
   if (game) renderCellContents();
 }
 
@@ -574,14 +578,17 @@ el("personalize-file-input").addEventListener("change", async (e) => {
   }
   const persist = el("personalize-persist-checkbox").checked;
   await saveCustomImage(file, { persist });
+  setSelectedSkin("photo");
   await refreshPersonalizePreview();
 });
 
 el("btn-personalize-remove").addEventListener("click", async () => {
   await removeCustomImage();
   el("personalize-file-input").value = "";
+  if (getSelectedSkin() === "photo") setSelectedSkin(DEFAULT_SKIN_ID);
   await refreshPersonalizePreview();
 });
 
 // ---------- Carregamento inicial ----------
+buildCatGallery();
 refreshPersonalizePreview();
