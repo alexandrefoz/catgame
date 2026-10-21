@@ -146,6 +146,12 @@ body {
   box-shadow: 0 2px 0 var(--color-border);
 }
 .btn-icon:active { box-shadow: 0 0 0 var(--color-border); }
+.mark-mode.active {
+  background: #fff1b8;
+  border-color: #d5a900;
+  color: #5d4600;
+  box-shadow: 0 0 0 2px rgba(213, 169, 0, 0.22);
+}
 
 .btn:focus-visible, input:focus-visible, [tabindex]:focus-visible {
   outline: 3px solid var(--focus-ring);
@@ -187,6 +193,43 @@ body {
   background-color: var(--color-surface);
 }
 
+.color-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 0.65rem;
+  margin: 0 auto 0.8rem;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+.color-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid rgba(46, 42, 38, 0.12);
+  border-radius: 999px;
+  background-color: var(--color-surface);
+}
+.color-legend-swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1px solid rgba(46, 42, 38, 0.24);
+  background-color: currentColor;
+}
+.color-legend-item.region-0 .color-legend-swatch { color: var(--region-0); }
+.color-legend-item.region-1 .color-legend-swatch { color: var(--region-1); }
+.color-legend-item.region-2 .color-legend-swatch { color: var(--region-2); }
+.color-legend-item.region-3 .color-legend-swatch { color: var(--region-3); }
+.color-legend-item.region-4 .color-legend-swatch { color: var(--region-4); }
+.color-legend-item.region-5 .color-legend-swatch { color: var(--region-5); }
+.color-legend-item.region-6 .color-legend-swatch { color: var(--region-6); }
+.color-legend-item.region-7 .color-legend-swatch { color: var(--region-7); }
+.color-legend-item.region-8 .color-legend-swatch { color: var(--region-8); }
+
 .cell {
   display: flex;
   align-items: center;
@@ -213,12 +256,35 @@ body {
 }
 
 .cell.state-empty { opacity: 1; }
-.cell .mark-empty::after {
-  content: "✕";
-  color: var(--color-text-muted);
-  font-size: 0.55em;
-  opacity: 0.6;
+
+/* Marcador "sinal verde": gato confirmado, sem conflito. */
+.marker-circle {
+  width: 68%;
+  height: 68%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, #a9f0b7 0%, var(--color-success) 60%, #1f6b40 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25), inset 0 -3px 5px rgba(0, 0, 0, 0.2);
 }
+/* Marcador "sinal vermelho": gato em conflito com outro (vai terminar o jogo). */
+.marker-circle--danger {
+  background: radial-gradient(circle at 35% 28%, #ffb4a8 0%, var(--color-error) 60%, #7e2015 100%);
+}
+
+/* Marcador "bandeirinha": anotação do jogador para lembrar que não há gato ali. */
+.marker-warning {
+  width: 72%;
+  height: 72%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82em;
+  filter: drop-shadow(0 2px 1px rgba(46, 42, 38, 0.22));
+}
+.marker-warning::after {
+  content: "🚩";
+  line-height: 1;
+}
+
 .cell .cat-img {
   width: 88%;
   height: 88%;
@@ -316,8 +382,42 @@ body {
   overflow: hidden;
 }
 .personalize-preview img { width: 100%; height: 100%; object-fit: cover; }
+.personalize-preview svg { width: 85%; height: 85%; }
 .personalize-persist { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; }
 .form-error { color: var(--color-error); }
+
+.cat-gallery {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+  margin: 0.5rem 0 1.25rem;
+}
+.cat-gallery-option {
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  border: 2px solid var(--color-border);
+  background: var(--color-bg);
+  padding: 0.3rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cat-gallery-option svg { width: 100%; height: 100%; }
+.cat-gallery-option.selected {
+  border-color: var(--color-primary);
+  background: #fff1e6;
+  box-shadow: 0 0 0 2px rgba(232, 121, 63, 0.35);
+}
+.cat-gallery-default-dot {
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, #a9f0b7 0%, var(--color-success) 60%, #1f6b40 100%);
+}
+
+.marker-skin { width: 82%; height: 82%; }
+.marker-skin svg { width: 100%; height: 100%; }
 
 .win-summary { display: grid; grid-template-columns: 1fr auto; gap: 0.4rem 0.8rem; }
 .win-summary dd { margin: 0; font-weight: 600; text-align: right; }
