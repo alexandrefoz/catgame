@@ -23,11 +23,26 @@ export function createGameState(puzzle) {
   };
 }
 
+// Cada entrada do histórico é um lote de células ({row, col, prevValue}[]) para que ações com
+// efeito colateral (ex: marcar um gato e já eliminar a linha/coluna/região ao redor) desfaçam
+// tudo de uma vez só, em um único "desfazer" — e não uma célula por vez.
 export function setCell(state, row, col, newValue) {
   const prevValue = state.grid[row][col];
   if (prevValue === newValue) return state;
-  state.history.push({ row, col, prevValue });
+  state.history.push({ cells: [{ row, col, prevValue }] });
   state.grid[row][col] = newValue;
+  return state;
+}
+
+export function setCellsBatch(state, changes) {
+  const cells = [];
+  for (const { row, col, newValue } of changes) {
+    const prevValue = state.grid[row][col];
+    if (prevValue === newValue) continue;
+    cells.push({ row, col, prevValue });
+    state.grid[row][col] = newValue;
+  }
+  if (cells.length > 0) state.history.push({ cells });
   return state;
 }
 
@@ -41,7 +56,9 @@ export function cycleCell(state, row, col) {
 export function undo(state) {
   const last = state.history.pop();
   if (!last) return false;
-  state.grid[last.row][last.col] = last.prevValue;
+  for (const { row, col, prevValue } of last.cells) {
+    state.grid[row][col] = prevValue;
+  }
   return true;
 }
 

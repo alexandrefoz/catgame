@@ -1,6 +1,6 @@
 import { generatePuzzle } from "./board-generator.js";
 import {
-  createGameState, cycleCell, setCell, undo, checkWin, elapsedMs,
+  createGameState, setCell, setCellsBatch, undo, checkWin, elapsedMs,
   recordHintUsed, serializeGameState, deserializeGameState, CellState,
 } from "./game-state.js";
 import { getNextHint } from "./hints.js";
@@ -32,6 +32,9 @@ let timerInterval = null;
 let focusedCell = { row: 0, col: 0 };
 let customCatImageUrl = null;
 let pendingConfirmAction = null;
+let longPressTimer = null;
+let longPressTriggered = false;
+const LONG_PRESS_MS = 480;
 
 document.querySelectorAll("[data-game-name]").forEach((n) => (n.textContent = GAME_NAME));
 
@@ -181,6 +184,25 @@ function renderBoard() {
       btn.addEventListener("click", () => handleCellActivate(r, c));
       btn.addEventListener("keydown", (e) => handleCellKeydown(e, r, c));
       btn.addEventListener("focus", () => (focusedCell = { row: r, col: c }));
+      btn.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        handleCellMarkEmpty(r, c);
+      });
+      btn.addEventListener(
+        "touchstart",
+        () => {
+          longPressTriggered = false;
+          clearTimeout(longPressTimer);
+          longPressTimer = setTimeout(() => {
+            longPressTriggered = true;
+            if (navigator.vibrate) navigator.vibrate(15);
+            handleCellMarkEmpty(r, c);
+          }, LONG_PRESS_MS);
+        },
+        { passive: true }
+      );
+      btn.addEventListener("touchend", () => clearTimeout(longPressTimer));
+      btn.addEventListener("touchmove", () => clearTimeout(longPressTimer));
       board.appendChild(btn);
     }
   }
@@ -272,11 +294,57 @@ function triggerPlacedAnimation(r, c) {
   btn.classList.add("just-placed");
 }
 
+// Células que um gato em (r,c) elimina pelas regras: mesma linha, mesma coluna, mesma região
+// e as 8 vizinhas. Usado para marcar "✕" automaticamente ao confirmar um gato válido.
+function eliminatedCellsFor(r, c) {
+  const { size, regions } = game.puzzle;
+  const targets = new Set();
+  for (let i = 0; i < size; i++) {
+    targets.add(`${r},${i}`);
+    targets.add(`${i},${c}`);
+  }
+  const regionId = regions[r][c];
+  for (let rr = 0; rr < size; rr++) {
+    for (let cc = 0; cc < size; cc++) {
+      if (regions[rr][cc] === regionId) targets.add(`${rr},${cc}`);
+    }
+  }
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      const rr = r + dr;
+      const cc = c + dc;
+      if (rr >= 0 && rr < size && cc >= 0 && cc < size) targets.add(`${rr},${cc}`);
+    }
+  }
+  targets.delete(`${r},${c}`);
+  return [...targets].map((key) => key.split(",").map(Number));
+}
+
 function handleCellActivate(r, c) {
   if (game.status !== "playing") return;
-  cycleCell(game, r, c);
-  const newState = game.grid[r][c];
+  if (longPressTriggered) {
+    longPressTriggered = false;
+    return;
+  }
+
+  const order = [CellState.UNKNOWN, CellState.CAT, CellState.EMPTY];
+  const current = game.grid[r][c];
+  const newState = order[(order.indexOf(current) + 1) % order.length];
+
+  if (newState === CellState.CAT) {
+    const changes = [{ row: r, col: c, newValue: CellState.CAT }];
+    for (const [rr, cc] of eliminatedCellsFor(r, c)) {
+      if (game.grid[rr][cc] === CellState.UNKNOWN) {
+        changes.push({ row: rr, col: cc, newValue: CellState.EMPTY });
+      }
+    }
+    setCellsBatch(game, changes);
+  } else {
+    setCell(game, r, c, newState);
+  }
+
   afterMove();
+
   if (newState === CellState.CAT) {
     triggerPlacedAnimation(r, c);
     if (placementConflicts(r, c)) {
@@ -286,6 +354,16 @@ function handleCellActivate(r, c) {
       playCatSuccess();
     }
   }
+}
+
+// Clique direito (desktop) ou toque longo (celular): marca/desmarca uma célula como vazia
+// diretamente, sem precisar passar pelo gato no meio do ciclo normal.
+function handleCellMarkEmpty(r, c) {
+  if (game.status !== "playing") return;
+  const current = game.grid[r][c];
+  const next = current === CellState.EMPTY ? CellState.UNKNOWN : CellState.EMPTY;
+  setCell(game, r, c, next);
+  afterMove();
 }
 
 function handleCellKeydown(e, r, c) {
