@@ -1,7 +1,7 @@
 import { test, assert, assertEqual } from "./harness.mjs";
 import {
   createGameState, setCell, setCellsBatch, cycleCell, undo, checkWin,
-  getCatCells, CellState,
+  getCatCells, isCatPlacementCorrect, CellState,
 } from "../js/game-state.js";
 
 // Puzzle 5x5 trivial (regiões por coluna), com a mesma solução válida usada em rules.test.js —
@@ -133,6 +133,41 @@ test("checkWin: 5 gatos que quebram uma regra (adjacência) não vencem", () => 
   setCell(state, 4, 4, CellState.CAT);
   assertEqual(checkWin(state), false);
   assertEqual(state.status, "playing");
+});
+
+test("isCatPlacementCorrect: só é true na célula exata da solução para aquela linha", () => {
+  const state = createGameState(trivialPuzzle());
+  // solução: linha 0 -> col2
+  assertEqual(isCatPlacementCorrect(state, 0, 2), true);
+  assertEqual(isCatPlacementCorrect(state, 0, 0), false);
+  assertEqual(isCatPlacementCorrect(state, 0, 4), false);
+});
+
+// Regressão: um bug real encontrado em produção. A checagem antiga só validava se os gatos já
+// marcados eram consistentes ENTRE SI (sem repetir linha/coluna/região, sem vizinhança) — mas
+// isso não garante que sejam a solução real. É possível marcar dois gatos que não conflitam
+// entre si e, mesmo assim, nenhum dos dois pertencer à solução, deixando o jogo "travado" sem
+// vitória nem derrota. A correção exige comparar sempre contra `puzzle.solution`.
+test("checkWin: gatos que não conflitam entre si mas não são a solução real não vencem (regressão)", () => {
+  const state = createGameState(trivialPuzzle());
+  // solução real: [2, 4, 1, 3, 0]. Os gatos abaixo são estruturalmente não-conflitantes entre
+  // si (linhas, colunas, regiões e vizinhança todas diferentes/ok) mas NENHUM bate com a solução.
+  setCell(state, 0, 0, CellState.CAT); // solução pede col2
+  setCell(state, 2, 3, CellState.CAT); // solução pede col1
+  assertEqual(isCatPlacementCorrect(state, 0, 0), false);
+  assertEqual(isCatPlacementCorrect(state, 2, 3), false);
+  assertEqual(checkWin(state), false, "gatos não-conflitantes mas incorretos nunca devem vencer");
+  assertEqual(state.status, "playing");
+});
+
+test("checkWin: um gato correto a mais do que a solução (fora da linha certa) não vence", () => {
+  const state = createGameState(trivialPuzzle());
+  setCell(state, 0, 2, CellState.CAT); // correto
+  setCell(state, 1, 4, CellState.CAT); // correto
+  setCell(state, 2, 1, CellState.CAT); // correto
+  setCell(state, 3, 3, CellState.CAT); // correto
+  setCell(state, 4, 2, CellState.CAT); // ERRADO: solução pede col0 na linha 4, col2 já está ocupado na linha 0
+  assertEqual(checkWin(state), false);
 });
 
 test("getCatCells: retorna exatamente as células marcadas como gato", () => {
