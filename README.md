@@ -57,6 +57,8 @@ Os testes são determinísticos e cobrem:
 - `tests/solver.test.js` — solucionador (zero, uma e múltiplas soluções; dedução lógica).
 - `tests/generator.test.js` — gerador (toda dificuldade produz solução única e válida;
   reprodutibilidade por semente; robustez em gerações repetidas).
+- `tests/game-state.test.js` — estado de uma partida (marcar/desmarcar, desfazer em lote,
+  condição de vitória).
 
 Execute os testes antes de publicar qualquer alteração nas regras ou no gerador.
 
