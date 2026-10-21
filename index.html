@@ -80,10 +80,10 @@
         <li>Existe exatamente <strong>um gato por região colorida</strong>.</li>
         <li>Nenhum gato pode ficar <strong>vizinho de outro</strong>, nem na diagonal.</li>
       </ul>
-      <p>Toque numa célula para alternar: vazia → gato 🐱 → marcada como vazia (✕) → vazia.</p>
-      <p>Ao confirmar um gato, o jogo já marca ✕ sozinho em toda a linha, coluna, região e ao redor dele — ali não pode mais haver outro gato.</p>
-      <p>Clique com o botão direito (ou mantenha o dedo pressionado numa célula, no celular) para marcar ou desmarcar um ✕ direto, sem precisar passar pelo gato.</p>
-      <p><strong>Atenção:</strong> se você marcar um gato na mesma linha, coluna, região ou vizinho de outro gato, o jogo termina na hora. Pense bem antes de marcar!</p>
+      <p>Toque numa célula para alternar: vazia → 🟢 sinal verde (gato confirmado) → ⚠️ placa de advertência (você acha que aqui não tem gato) → vazia.</p>
+      <p>A placa de advertência é só uma anotação sua, como as bandeirinhas do Batalha Naval — o jogo não coloca nenhuma sozinho. Use pra marcar onde você já deduziu que não pode ter gato; isso é o que ajuda a raciocinar.</p>
+      <p>Clique com o botão direito (ou mantenha o dedo pressionado numa célula, no celular) para colocar ou tirar a placa de advertência direto, sem precisar passar pelo sinal verde.</p>
+      <p><strong>Atenção:</strong> se você confirmar um gato na mesma linha, coluna, região ou vizinho de outro, ele vira sinal vermelho e o jogo termina na hora. Pense bem antes de marcar!</p>
       <button type="button" class="btn btn-primary modal-close">Entendi</button>
     </div>
 
@@ -95,11 +95,16 @@
 
     <div id="modal-personalize" class="modal" role="dialog" aria-labelledby="personalize-title" hidden>
       <h2 id="personalize-title">Personalizar personagem</h2>
-      <p>Escolha uma imagem para substituir o gato (JPEG, PNG ou WebP, até 5 MB). A imagem fica só no seu navegador — nunca é enviada pela internet.</p>
       <div class="personalize-preview">
         <img id="personalize-preview-img" alt="Prévia do personagem personalizado" hidden />
-        <span id="personalize-preview-placeholder">🐱</span>
+        <span id="personalize-preview-placeholder" aria-hidden="true"></span>
       </div>
+
+      <h3>Escolha seu gato</h3>
+      <div id="cat-gallery" class="cat-gallery" role="radiogroup" aria-label="Escolha seu gato"></div>
+
+      <h3>Ou use a foto do seu gato</h3>
+      <p>JPEG, PNG ou WebP, até 5 MB. A imagem fica só no seu navegador — nunca é enviada pela internet.</p>
       <input type="file" id="personalize-file-input" accept="image/jpeg,image/png,image/webp" />
       <label class="personalize-persist">
         <input type="checkbox" id="personalize-persist-checkbox" checked />
@@ -107,7 +112,7 @@
       </label>
       <p id="personalize-error" class="form-error" role="alert" hidden></p>
       <div class="modal-actions">
-        <button type="button" id="btn-personalize-remove" class="btn btn-secondary">Remover imagem</button>
+        <button type="button" id="btn-personalize-remove" class="btn btn-secondary">Remover foto</button>
         <button type="button" class="btn btn-primary modal-close">Fechar</button>
       </div>
     </div>

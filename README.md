@@ -25,12 +25,13 @@ Toque/clique em uma célula para alternar entre: vazia → 🐱 gato → ✕ mar
 vazia → vazia. Use as marcações ✕ para anotar onde você já deduziu que não pode
 haver gato.
 
-**Atenção:** marcar um gato que quebra a regra 1, 2, 3 ou 4 (mesma linha, coluna,
-região ou vizinhança) termina a partida na hora — não dá para continuar depois de
-um erro. Um miado agudo confirma um gato válido; um miado forte e bravo (com um
-efeito de ruído, simulando um chiado) avisa o erro fatal. O som é opcional e pode
-ser desligado a qualquer momento pelo botão 🔊/🔇 no canto superior direito — a
-preferência fica salva no navegador.
+**Atenção:** marcar um gato que não é o da solução real termina a partida na hora —
+não dá para continuar depois de um erro. O jogo nunca preenche as marcações ✕
+sozinho: é o jogador quem decide onde marcar, com risco real de errar (como as
+bandeirinhas do Batalha Naval). Um miado agudo confirma um gato correto; um miado
+forte e bravo (com um efeito de ruído, simulando um chiado) avisa o erro fatal. O
+som é opcional e pode ser desligado a qualquer momento pelo botão 🔊/🔇 no canto
+superior direito — a preferência fica salva no navegador.
 
 ## Como jogar localmente
 
@@ -98,6 +99,7 @@ js/fallback-puzzles.js  puzzles pré-validados, gerados por tests/generate-fallb
 js/game-state.js        estado de uma partida (marcações, desfazer, cronômetro)
 js/hints.js             dicas progressivas (3 níveis)
 js/sound.js             efeitos sonoros sintetizados (Web Audio API) + preferência de mudo
+js/cat-gallery.js       10 presets de gato em SVG próprio + preferência de skin selecionado
 js/storage.js           wrapper sobre localStorage com fallback em memória
 js/statistics.js        estatísticas persistidas (partidas, vitórias, melhores tempos)
 js/image-personalization.js  personalização opcional do personagem (IndexedDB, local)
@@ -157,9 +159,16 @@ uma rede de segurança para esse tamanho também.
 Toda a aparência está isolada em `css/style.css` e `css/responsive.css` — nenhuma
 cor, fonte ou espaçamento está hardcoded em `js/`. As cores de cada região usam
 variáveis CSS (`--region-0` a `--region-8`) e cada região também tem um padrão
-visual (textura) diferente, para não depender só da cor. A arte atual usa apenas
-emoji (🐱, ✕) como solução inicial (ver seção 8 do briefing do projeto) — pode ser
-substituída por SVGs próprios sem tocar em nenhuma lógica de jogo.
+visual (textura) diferente, para não depender só da cor.
+
+Os marcadores de célula seguem uma metáfora de semáforo/sinalização de trânsito:
+`.marker-circle--ok` (verde, gato confirmado), `.marker-circle--danger` (vermelho,
+gato em conflito — aciona o fim de jogo) e `.marker-warning` (placa de advertência
+amarela, célula eliminada pelas regras). O vermelho é sempre a bolinha simples —
+nunca é "pintado" com um personagem, pois funciona como sinal universal de erro.
+O verde, por sua vez, pode ser substituído por um dos 10 gatos da galeria
+(`js/cat-gallery.js`, SVG próprio) ou por uma foto do jogador (seção
+"Personalização do personagem") — escolha em "Personalizar personagem".
 
 ## Como alterar as regras
 
@@ -171,14 +180,21 @@ regra precisa ser refletida nos três pontos citados e cobrida em `tests/rules.t
 
 ## Personalização do personagem
 
-Em "Personalizar personagem" o jogador escolhe uma imagem local (JPEG/PNG/WebP, até
-5 MB) para substituir o gato nas células encontradas. Tudo roda no navegador:
-- a imagem nunca é enviada para nenhum servidor;
-- pode ser salva neste dispositivo (IndexedDB) ou só para a sessão atual;
-- limpar os dados do navegador apaga a personalização salva — isso é informado na
-  própria interface;
-- se IndexedDB estiver indisponível, o jogo cai automaticamente para memória (válido
-  só durante a sessão) sem quebrar nada.
+Em "Personalizar personagem" o jogador escolhe entre:
+- **Galeria de gatos** (`js/cat-gallery.js`): 10 variações — laranja, preto, branco,
+  cinza, rajado, siamês, tricolor, filhote, engraçado e pixel art — desenhadas em SVG
+  próprio (sem imagens, fontes ou APIs externas), guardadas via `localStorage`.
+- **Foto do próprio gato**: uma imagem local (JPEG/PNG/WebP, até 5 MB) que substitui
+  o gato nas células encontradas. Tudo roda no navegador:
+  - a imagem nunca é enviada para nenhum servidor;
+  - pode ser salva neste dispositivo (IndexedDB) ou só para a sessão atual;
+  - limpar os dados do navegador apaga a personalização salva — isso é informado na
+    própria interface;
+  - se IndexedDB estiver indisponível, o jogo cai automaticamente para memória
+    (válido só durante a sessão) sem quebrar nada.
+
+A escolha (galeria ou foto) é independente da lógica do jogo: nenhuma delas tem
+acesso à solução do puzzle, só trocam a aparência do marcador verde.
 
 ## Limitações conhecidas
 
