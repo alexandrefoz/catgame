@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cat-logic-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["tests/dev-server.mjs"],
+      "port": 4173
+    }
+  ]
+}

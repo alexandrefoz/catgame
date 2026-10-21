@@ -1,0 +1,14 @@
+@media (min-width: 640px) {
+  #app { padding: 2rem; }
+  .start-actions { flex-direction: row; flex-wrap: wrap; }
+  .start-actions .btn { flex: 1 1 45%; }
+}
+
+@media (max-height: 640px) {
+  .brand-emoji { font-size: 2rem; }
+  .brand h1 { font-size: 1.4rem; }
+}
+
+@media (pointer: coarse) {
+  .btn, .cell { min-height: 44px; }
+}

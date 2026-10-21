@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cat Logic — jogo de lógica com gatos</title>
+<meta name="description" content="Encontre os gatos escondidos no tabuleiro usando dedução lógica: um por linha, um por coluna, um por região e nunca vizinhos." />
+<link rel="icon" href="data:," />
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/responsive.css" />
+</head>
+<body>
+<div id="app">
+
+  <section id="screen-start" class="screen" aria-labelledby="start-title">
+    <header class="brand">
+      <span class="brand-emoji" aria-hidden="true">🐱</span>
+      <h1 id="start-title" data-game-name>Cat Logic</h1>
+      <p class="tagline">Encontre os gatos escondidos usando só a lógica.</p>
+    </header>
+
+    <div id="continue-banner" class="continue-banner" hidden>
+      <p>Você tem uma partida em andamento.</p>
+      <button type="button" id="btn-continue" class="btn btn-primary">Continuar partida</button>
+    </div>
+
+    <fieldset class="difficulty-select">
+      <legend>Dificuldade</legend>
+      <label class="difficulty-option">
+        <input type="radio" name="difficulty" value="facil" checked />
+        <span>Fácil <small>5×5</small></span>
+      </label>
+      <label class="difficulty-option">
+        <input type="radio" name="difficulty" value="medio" />
+        <span>Médio <small>7×7</small></span>
+      </label>
+      <label class="difficulty-option">
+        <input type="radio" name="difficulty" value="dificil" />
+        <span>Difícil <small>9×9</small></span>
+      </label>
+    </fieldset>
+
+    <div class="start-actions">
+      <button type="button" id="btn-play" class="btn btn-primary btn-large">▶ Jogar</button>
+      <button type="button" id="btn-how-to-play" class="btn btn-secondary">Como jogar</button>
+      <button type="button" id="btn-stats" class="btn btn-secondary">Estatísticas</button>
+      <button type="button" id="btn-personalize" class="btn btn-secondary">Personalizar personagem</button>
+    </div>
+  </section>
+
+  <section id="screen-game" class="screen" hidden aria-labelledby="game-title">
+    <header class="game-header">
+      <button type="button" id="btn-back-to-menu" class="btn btn-icon" aria-label="Voltar ao menu">←</button>
+      <h1 id="game-title" class="visually-hidden">Partida em andamento</h1>
+      <div class="game-stat" id="cats-counter" aria-live="polite">0 / 0 gatos</div>
+      <div class="game-stat" id="timer" aria-live="off">00:00</div>
+    </header>
+
+    <div id="board-wrapper">
+      <div id="board" role="grid" aria-label="Tabuleiro do jogo"></div>
+    </div>
+
+    <p id="hint-message" class="hint-message" role="status" aria-live="polite" hidden></p>
+
+    <footer class="game-toolbar">
+      <button type="button" id="btn-undo" class="btn btn-icon" aria-label="Desfazer">↶ Desfazer</button>
+      <button type="button" id="btn-hint" class="btn btn-icon" aria-label="Pedir dica">💡 Dica</button>
+      <button type="button" id="btn-restart" class="btn btn-icon" aria-label="Reiniciar partida">⟲ Reiniciar</button>
+    </footer>
+  </section>
+
+  <div id="modal-overlay" class="modal-overlay" hidden>
+
+    <div id="modal-how-to-play" class="modal" role="dialog" aria-labelledby="how-to-play-title" hidden>
+      <h2 id="how-to-play-title">Como jogar</h2>
+      <ul class="rules-list">
+        <li>Existe exatamente <strong>um gato por linha</strong>.</li>
+        <li>Existe exatamente <strong>um gato por coluna</strong>.</li>
+        <li>Existe exatamente <strong>um gato por região colorida</strong>.</li>
+        <li>Nenhum gato pode ficar <strong>vizinho de outro</strong>, nem na diagonal.</li>
+      </ul>
+      <p>Toque numa célula para alternar: vazia → gato 🐱 → marcada como vazia (✕) → vazia.</p>
+      <p>Use marcações ✕ para anotar onde você já deduziu que <em>não</em> pode haver gato — isso ajuda a raciocinar.</p>
+      <button type="button" class="btn btn-primary modal-close">Entendi</button>
+    </div>
+
+    <div id="modal-stats" class="modal" role="dialog" aria-labelledby="stats-title" hidden>
+      <h2 id="stats-title">Estatísticas</h2>
+      <dl class="stats-list" id="stats-content"></dl>
+      <button type="button" class="btn btn-primary modal-close">Fechar</button>
+    </div>
+
+    <div id="modal-personalize" class="modal" role="dialog" aria-labelledby="personalize-title" hidden>
+      <h2 id="personalize-title">Personalizar personagem</h2>
+      <p>Escolha uma imagem para substituir o gato (JPEG, PNG ou WebP, até 5 MB). A imagem fica só no seu navegador — nunca é enviada pela internet.</p>
+      <div class="personalize-preview">
+        <img id="personalize-preview-img" alt="Prévia do personagem personalizado" hidden />
+        <span id="personalize-preview-placeholder">🐱</span>
+      </div>
+      <input type="file" id="personalize-file-input" accept="image/jpeg,image/png,image/webp" />
+      <label class="personalize-persist">
+        <input type="checkbox" id="personalize-persist-checkbox" checked />
+        Salvar neste dispositivo (até eu apagar os dados do navegador)
+      </label>
+      <p id="personalize-error" class="form-error" role="alert" hidden></p>
+      <div class="modal-actions">
+        <button type="button" id="btn-personalize-remove" class="btn btn-secondary">Remover imagem</button>
+        <button type="button" class="btn btn-primary modal-close">Fechar</button>
+      </div>
+    </div>
+
+    <div id="modal-win" class="modal" role="dialog" aria-labelledby="win-title" hidden>
+      <h2 id="win-title">🎉 Você encontrou todos os gatos!</h2>
+      <dl class="win-summary">
+        <dt>Tempo</dt><dd id="win-time">—</dd>
+        <dt>Dicas usadas</dt><dd id="win-hints">—</dd>
+      </dl>
+      <div class="modal-actions">
+        <button type="button" id="btn-share-result" class="btn btn-secondary">Compartilhar resultado</button>
+        <button type="button" id="btn-play-again" class="btn btn-primary">Jogar novamente</button>
+      </div>
+    </div>
+
+    <div id="modal-confirm-restart" class="modal" role="dialog" aria-labelledby="confirm-restart-title" hidden>
+      <h2 id="confirm-restart-title">Reiniciar partida?</h2>
+      <p>Seu progresso nesta partida será perdido.</p>
+      <div class="modal-actions">
+        <button type="button" id="btn-confirm-restart-cancel" class="btn btn-secondary">Cancelar</button>
+        <button type="button" id="btn-confirm-restart-ok" class="btn btn-primary">Reiniciar</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
