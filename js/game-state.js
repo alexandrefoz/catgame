@@ -1,6 +1,6 @@
 // Estado de uma partida: marcações do jogador, histórico para desfazer, cronômetro e dicas.
 // Desacoplado da interface - app.js é quem traduz eventos de toque/clique em chamadas aqui.
-import { validatePlayerCats, cellKey } from "./rules.js";
+import { cellKey } from "./rules.js";
 
 export const CellState = Object.freeze({
   UNKNOWN: "unknown",
@@ -72,11 +72,28 @@ export function getCatCells(state) {
   return cats;
 }
 
+// Um gato só é correto se bater exatamente com a solução gerada para aquela linha.
+// Importante: NÃO basta checar consistência estrutural entre os gatos já marcados
+// (sem repetir linha/coluna/região, sem vizinhança) — é perfeitamente possível marcar
+// gatos que não conflitam entre si mas que, mesmo assim, não são os da solução real
+// (a garantia de solução única vale para o conjunto completo de N gatos, não para
+// qualquer subconjunto parcial estruturalmente válido). Por isso a comparação é
+// sempre feita direto contra `puzzle.solution`, nunca inferida pelas regras sozinhas.
+export function isCatPlacementCorrect(state, row, col) {
+  return state.puzzle.solution[row] === col;
+}
+
 export function checkWin(state) {
-  const cats = getCatCells(state);
-  const won = validatePlayerCats(state.puzzle.size, state.puzzle.regions, cats);
-  if (won) state.status = "won";
-  return won;
+  const { size, solution } = state.puzzle;
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const isCat = state.grid[r][c] === CellState.CAT;
+      const shouldBeCat = solution[r] === c;
+      if (isCat !== shouldBeCat) return false;
+    }
+  }
+  state.status = "won";
+  return true;
 }
 
 export function elapsedMs(state) {

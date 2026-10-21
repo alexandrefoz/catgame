@@ -35,6 +35,7 @@ let customCatImageUrl = null;
 let pendingConfirmAction = null;
 let longPressTimer = null;
 let longPressTriggered = false;
+let markMode = "cat";
 const LONG_PRESS_MS = 480;
 
 document.querySelectorAll("[data-game-name]").forEach((n) => (n.textContent = GAME_NAME));
@@ -142,6 +143,7 @@ function startNewGame() {
 
 function enterGameScreen() {
   showScreen("game");
+  setMarkMode("cat");
   renderBoard();
   updateCatsCounter();
   hideHintMessage();
@@ -172,6 +174,7 @@ function renderBoard() {
   board.innerHTML = "";
   board.style.gridTemplateColumns = `repeat(${game.puzzle.size}, 1fr)`;
   board.style.gridTemplateRows = `repeat(${game.puzzle.size}, 1fr)`;
+  renderColorLegend();
 
   for (let r = 0; r < game.puzzle.size; r++) {
     for (let c = 0; c < game.puzzle.size; c++) {
@@ -210,6 +213,22 @@ function renderBoard() {
   renderCellContents();
 }
 
+function renderColorLegend() {
+  const legend = el("color-legend");
+  if (!legend) return;
+  const counts = new Map();
+  for (const row of game.puzzle.regions) {
+    for (const regionId of row) counts.set(regionId, (counts.get(regionId) ?? 0) + 1);
+  }
+  legend.innerHTML = "";
+  [...counts.entries()].sort(([a], [b]) => a - b).forEach(([regionId, cellCount]) => {
+    const item = document.createElement("span");
+    item.className = `color-legend-item region-${regionId}`;
+    item.innerHTML = `<span class="color-legend-swatch" aria-hidden="true"></span><span>Cor ${regionId + 1}: 1 gato (${cellCount} ${cellCount === 1 ? "casa" : "casas"})</span>`;
+    legend.appendChild(item);
+  });
+}
+
 function renderCellContents() {
   const cells = el("board").children;
   const errorCells = computeErrorCells();
@@ -220,7 +239,7 @@ function renderCellContents() {
       const inConflict = errorCells.has(`${r},${c}`);
       btn.classList.toggle("error", inConflict);
       btn.innerHTML = "";
-      let label = `Linha ${r + 1}, coluna ${c + 1}, região ${game.puzzle.regions[r][c] + 1}. `;
+      let label = `Linha ${r + 1}, coluna ${c + 1}, cor ${game.puzzle.regions[r][c] + 1}. `;
       if (state === CellState.CAT) {
         if (inConflict) {
           const marker = document.createElement("span");
@@ -251,7 +270,7 @@ function renderCellContents() {
         const marker = document.createElement("span");
         marker.className = "marker marker-warning";
         btn.appendChild(marker);
-        label += "Placa de advertência: aqui não pode haver gato.";
+        label += "Bandeirinha: você marcou que aqui não pode haver gato.";
       } else {
         label += "Vazia, sem marcação.";
       }
@@ -293,6 +312,14 @@ function handleCellActivate(r, c) {
     return;
   }
 
+  if (markMode === "flag") {
+    if (game.grid[r][c] === CellState.CAT) return;
+    const nextFlagState = game.grid[r][c] === CellState.EMPTY ? CellState.UNKNOWN : CellState.EMPTY;
+    setCell(game, r, c, nextFlagState);
+    afterMove();
+    return;
+  }
+
   const order = [CellState.UNKNOWN, CellState.CAT, CellState.EMPTY];
   const current = game.grid[r][c];
   const newState = order[(order.indexOf(current) + 1) % order.length];
@@ -315,6 +342,21 @@ function handleCellActivate(r, c) {
     }
   }
 }
+
+function setMarkMode(mode) {
+  markMode = mode;
+  const button = el("btn-mark-mode");
+  if (!button) return;
+  const flagMode = mode === "flag";
+  button.classList.toggle("active", flagMode);
+  button.setAttribute("aria-pressed", String(flagMode));
+  button.setAttribute("aria-label", flagMode ? "Desativar modo de marcar bandeiras" : "Ativar modo de marcar bandeiras");
+  button.textContent = flagMode ? "🚩 Bandeira ativa" : "🚩 Marcar bandeira";
+}
+
+el("btn-mark-mode").addEventListener("click", () => {
+  setMarkMode(markMode === "flag" ? "cat" : "flag");
+});
 
 // Clique direito (desktop) ou toque longo (celular): marca/desmarca uma célula como vazia
 // diretamente, sem precisar passar pelo gato no meio do ciclo normal.
