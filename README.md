@@ -25,6 +25,13 @@ Toque/clique em uma célula para alternar entre: vazia → 🐱 gato → ✕ mar
 vazia → vazia. Use as marcações ✕ para anotar onde você já deduziu que não pode
 haver gato.
 
+**Atenção:** marcar um gato que quebra a regra 1, 2, 3 ou 4 (mesma linha, coluna,
+região ou vizinhança) termina a partida na hora — não dá para continuar depois de
+um erro. Um miado agudo confirma um gato válido; um miado forte e bravo (com um
+efeito de ruído, simulando um chiado) avisa o erro fatal. O som é opcional e pode
+ser desligado a qualquer momento pelo botão 🔊/🔇 no canto superior direito — a
+preferência fica salva no navegador.
+
 ## Como jogar localmente
 
 Não há passo de build. Para evitar problemas de CORS com módulos ES (`import`/`export`)
@@ -88,6 +95,7 @@ js/board-generator.js   gerador de puzzles (ver "Como funciona o gerador" abaixo
 js/fallback-puzzles.js  puzzles pré-validados, gerados por tests/generate-fallbacks.mjs
 js/game-state.js        estado de uma partida (marcações, desfazer, cronômetro)
 js/hints.js             dicas progressivas (3 níveis)
+js/sound.js             efeitos sonoros sintetizados (Web Audio API) + preferência de mudo
 js/storage.js           wrapper sobre localStorage com fallback em memória
 js/statistics.js        estatísticas persistidas (partidas, vitórias, melhores tempos)
 js/image-personalization.js  personalização opcional do personagem (IndexedDB, local)
@@ -175,12 +183,19 @@ Em "Personalizar personagem" o jogador escolhe uma imagem local (JPEG/PNG/WebP, 
 - A estimativa de dificuldade (`deductionsWithoutGuessing`) é uma heurística, não
   uma métrica validada estatisticamente — documentado acima, não deve ser lido como
   garantia de dificuldade "exata".
-- A geração em tempo real para 9×9 pode levar até ~1-2 segundos; a interface ainda
-  não exibe um indicador de carregamento dedicado para esse caso.
-- Não há suporte a desafio diário, ranking, conquistas, temas visuais, som, PWA ou
+- A geração em tempo real para 9×9 pode levar até ~1-2 segundos; o botão "Jogar"
+  mostra "Gerando puzzle..." e fica desabilitado durante esse tempo.
+- Os sons são sintetizados via Web Audio API (osciladores + ruído), não gravações
+  reais de gato — mantém o jogo sem dependências externas e sem download de áudio,
+  mas o resultado é estilizado, não realista.
+- Não há suporte a desafio diário, ranking, conquistas, temas visuais, PWA ou
   múltiplos idiomas nesta primeira versão — a arquitetura foi pensada para permitir
   essas evoluções (ver seção 14 do briefing do projeto), mas nada disso está
   implementado ainda.
+- O jogo termina imediatamente ao marcar um gato que quebra qualquer regra (decisão
+  de produto: ver mensagem a seguir), em vez de permitir correção livre com apenas
+  destaque visual do erro — isso torna o jogo mais punitivo que a maioria dos
+  puzzles de dedução do gênero, onde normalmente dá pra corrigir e continuar.
 - A navegação por teclado no tabuleiro usa `role="grid"`/`role="gridcell"` de forma
   simplificada (sem agrupamento explícito por linha); funciona com leitores de tela
   comuns, mas pode ser refinada no futuro.

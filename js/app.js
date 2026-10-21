@@ -10,6 +10,7 @@ import {
   saveCustomImage, loadCustomImage, removeCustomImage, validateImageFile,
 } from "./image-personalization.js";
 import { violatesAdjacency } from "./rules.js";
+import { playCatSuccess, playCatFail, isMuted, toggleMuted } from "./sound.js";
 
 export const GAME_NAME = "Cat Logic";
 const SAVE_KEY = "currentGame";
@@ -22,6 +23,7 @@ const modals = {
   stats: el("modal-stats"),
   personalize: el("modal-personalize"),
   win: el("modal-win"),
+  lose: el("modal-lose"),
   confirmRestart: el("modal-confirm-restart"),
 };
 
@@ -32,6 +34,20 @@ let customCatImageUrl = null;
 let pendingConfirmAction = null;
 
 document.querySelectorAll("[data-game-name]").forEach((n) => (n.textContent = GAME_NAME));
+
+// ---------- Som ----------
+function refreshMuteButton() {
+  const muted = isMuted();
+  const btn = el("btn-mute");
+  btn.textContent = muted ? "🔇" : "🔊";
+  btn.setAttribute("aria-pressed", String(muted));
+  btn.setAttribute("aria-label", muted ? "Ativar som" : "Desativar som");
+}
+el("btn-mute").addEventListener("click", () => {
+  toggleMuted();
+  refreshMuteButton();
+});
+refreshMuteButton();
 
 // ---------- Navegação entre telas ----------
 function showScreen(name) {
@@ -230,9 +246,46 @@ function computeErrorCells() {
   return errors;
 }
 
+// Verifica se colocar um gato em (r,c) quebra alguma regra em relação aos gatos já marcados
+// pelo jogador (linha, coluna, região ou vizinhança). Usado só para a célula recém-marcada —
+// não precisa varrer conflitos entre pares antigos, pois cada marcação já é checada na hora.
+function placementConflicts(r, c) {
+  const { size, regions } = game.puzzle;
+  for (let rr = 0; rr < size; rr++) {
+    for (let cc = 0; cc < size; cc++) {
+      if (rr === r && cc === c) continue;
+      if (game.grid[rr][cc] !== CellState.CAT) continue;
+      const sameRow = rr === r;
+      const sameCol = cc === c;
+      const sameRegion = regions[rr][cc] === regions[r][c];
+      const adjacent = violatesAdjacency(rr, cc, r, c);
+      if (sameRow || sameCol || sameRegion || adjacent) return true;
+    }
+  }
+  return false;
+}
+
+function triggerPlacedAnimation(r, c) {
+  const btn = el("board").children[r * game.puzzle.size + c];
+  btn.classList.remove("just-placed");
+  void btn.offsetWidth; // força reflow para a animação poder tocar de novo na mesma célula
+  btn.classList.add("just-placed");
+}
+
 function handleCellActivate(r, c) {
+  if (game.status !== "playing") return;
   cycleCell(game, r, c);
+  const newState = game.grid[r][c];
   afterMove();
+  if (newState === CellState.CAT) {
+    triggerPlacedAnimation(r, c);
+    if (placementConflicts(r, c)) {
+      playCatFail();
+      onGameLost();
+    } else {
+      playCatSuccess();
+    }
+  }
 }
 
 function handleCellKeydown(e, r, c) {
@@ -250,6 +303,7 @@ function handleCellKeydown(e, r, c) {
     e.preventDefault();
     handleCellActivate(r, c);
   } else if (e.key === "Backspace" || e.key === "Delete") {
+    if (game.status !== "playing") return;
     e.preventDefault();
     setCell(game, r, c, CellState.UNKNOWN);
     afterMove();
@@ -282,6 +336,7 @@ function updateCatsCounter() {
 
 // ---------- Desfazer / Reiniciar ----------
 el("btn-undo").addEventListener("click", () => {
+  if (game.status !== "playing") return;
   if (undo(game)) afterMove();
 });
 
@@ -295,6 +350,7 @@ el("btn-restart").addEventListener("click", () => {
 
 // ---------- Dicas ----------
 el("btn-hint").addEventListener("click", () => {
+  if (game.status !== "playing") return;
   const knownCats = [];
   for (let r = 0; r < game.puzzle.size; r++)
     for (let c = 0; c < game.puzzle.size; c++)
@@ -332,6 +388,28 @@ function onGameWon() {
 el("btn-play-again").addEventListener("click", () => {
   closeModal();
   startNewGame();
+});
+
+// ---------- Fim de jogo (gato marcado quebra uma regra) ----------
+function onGameLost() {
+  game.status = "lost";
+  stopTimer();
+  removeItem(SAVE_KEY);
+  openModal(modals.lose);
+}
+
+el("btn-lose-retry").addEventListener("click", () => {
+  closeModal();
+  game = createGameState(game.puzzle);
+  persistGame();
+  enterGameScreen();
+});
+
+el("btn-lose-menu").addEventListener("click", () => {
+  closeModal();
+  stopTimer();
+  showScreen("start");
+  refreshContinueBanner();
 });
 
 el("btn-share-result").addEventListener("click", async () => {

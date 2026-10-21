@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="css/responsive.css" />
 </head>
 <body>
+<button type="button" id="btn-mute" class="btn-mute" aria-label="Desativar som" aria-pressed="false">🔊</button>
 <div id="app">
 
   <section id="screen-start" class="screen" aria-labelledby="start-title">
@@ -81,6 +82,7 @@
       </ul>
       <p>Toque numa célula para alternar: vazia → gato 🐱 → marcada como vazia (✕) → vazia.</p>
       <p>Use marcações ✕ para anotar onde você já deduziu que <em>não</em> pode haver gato — isso ajuda a raciocinar.</p>
+      <p><strong>Atenção:</strong> se você marcar um gato na mesma linha, coluna, região ou vizinho de outro gato, o jogo termina na hora. Pense bem antes de marcar!</p>
       <button type="button" class="btn btn-primary modal-close">Entendi</button>
     </div>
 
@@ -118,6 +120,15 @@
       <div class="modal-actions">
         <button type="button" id="btn-share-result" class="btn btn-secondary">Compartilhar resultado</button>
         <button type="button" id="btn-play-again" class="btn btn-primary">Jogar novamente</button>
+      </div>
+    </div>
+
+    <div id="modal-lose" class="modal" role="dialog" aria-labelledby="lose-title" hidden>
+      <h2 id="lose-title">😿 Esse gato quebrou uma regra</h2>
+      <p>O gato marcado por último ficou na mesma linha, coluna, região ou vizinho de outro gato. Tente de novo!</p>
+      <div class="modal-actions">
+        <button type="button" id="btn-lose-menu" class="btn btn-secondary">Voltar ao menu</button>
+        <button type="button" id="btn-lose-retry" class="btn btn-primary">Tentar novamente</button>
       </div>
     </div>
 
