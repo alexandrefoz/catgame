@@ -17,8 +17,9 @@ export const DIFFICULTY_SIZES = Object.freeze({
   dificil: 9,
 });
 
-const RANDOM_ATTEMPTS_BY_SIZE = { 5: 1500, 7: 2500, 9: 1500 };
-const REPAIR_ITERATIONS_BY_SIZE = { 5: 0, 7: 150, 9: 300 };
+const RANDOM_ATTEMPTS_BY_SIZE = { 5: 1500, 7: 2500, 9: 6000 };
+const REPAIR_ITERATIONS_BY_SIZE = { 5: 0, 7: 150, 9: 700 };
+const MIN_CELLS_PER_REGION = 4;
 
 function allCells(size) {
   const cells = [];
@@ -51,11 +52,16 @@ function growRegionsFromSeeds(size, seedCells, rng) {
       }
     }
     if (edges.length === 0) break;
-    for (const { regionId, nr, nc } of shuffle(edges, rng)) {
-      if (regions[nr][nc] !== -1) continue;
-      regions[nr][nc] = regionId;
-      remaining--;
-    }
+
+    // Primeiro completa as regiões menores. Isso impede que uma cor termine com
+    // apenas uma ou duas casas e deixa a abertura do puzzle menos óbvia.
+    const counts = Array.from({ length: size }, (_, regionId) => regionCellCount(regions, size, regionId));
+    const minimumEdges = edges.filter(({ regionId }) => counts[regionId] < MIN_CELLS_PER_REGION);
+    const candidates = minimumEdges.length > 0 ? minimumEdges : edges;
+    const { regionId, nr, nc } = candidates[pickInt(rng, 0, candidates.length - 1)];
+    if (regions[nr][nc] !== -1) continue;
+    regions[nr][nc] = regionId;
+    remaining--;
   }
   return regions;
 }
@@ -77,6 +83,13 @@ function regionCellCount(regions, size, regionId) {
   let n = 0;
   for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) if (regions[r][c] === regionId) n++;
   return n;
+}
+
+function regionsHaveMinimumSize(regions, size, minimum = MIN_CELLS_PER_REGION) {
+  for (let regionId = 0; regionId < size; regionId++) {
+    if (regionCellCount(regions, size, regionId) < minimum) return false;
+  }
+  return true;
 }
 
 function isRegionConnectedWithout(regions, size, regionId, excludeR, excludeC) {
@@ -173,6 +186,7 @@ export function generatePuzzle(difficulty, seedInput) {
   const randomAttempts = RANDOM_ATTEMPTS_BY_SIZE[size] ?? 1500;
   for (let attempt = 0; attempt < randomAttempts; attempt++) {
     const regions = growRegionsFromSeeds(size, randomDistinctSeeds(size, rng), rng);
+    if (!regionsHaveMinimumSize(regions, size)) continue;
     const { solutions, truncated } = solveBacktracking(size, regions, 2);
     if (!truncated && solutions.length === 1) {
       return buildPuzzleResult(size, regions, cadsToArray(solutions[0], size), seed, difficulty);
@@ -181,17 +195,19 @@ export function generatePuzzle(difficulty, seedInput) {
 
   const repairIterations = REPAIR_ITERATIONS_BY_SIZE[size] ?? 150;
   if (repairIterations > 0) {
-    for (let attempt = 0; attempt < 8; attempt++) {
+    for (let attempt = 0; attempt < 20; attempt++) {
       const regions = growRegionsFromSeeds(size, randomDistinctSeeds(size, rng), rng);
+      if (!regionsHaveMinimumSize(regions, size)) continue;
       const repaired = repairTowardsUniqueness(size, regions, rng, repairIterations);
-      if (repaired.solutionCount === 1) {
+      if (repaired.solutionCount === 1 && regionsHaveMinimumSize(repaired.regions, size)) {
         const { solutions } = solveBacktracking(size, repaired.regions, 1);
         return buildPuzzleResult(size, repaired.regions, solutions[0], seed, difficulty);
       }
     }
   }
 
-  const fallbackList = FALLBACK_PUZZLES[difficulty] ?? FALLBACK_PUZZLES.medio;
+  const fallbackList = (FALLBACK_PUZZLES[difficulty] ?? FALLBACK_PUZZLES.medio)
+    .filter((puzzle) => regionsHaveMinimumSize(puzzle.regions, puzzle.size));
   if (fallbackList && fallbackList.length > 0) {
     const fallback = fallbackList[pickInt(rng, 0, fallbackList.length - 1)];
     return {

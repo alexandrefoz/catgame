@@ -174,7 +174,6 @@ function renderBoard() {
   board.innerHTML = "";
   board.style.gridTemplateColumns = `repeat(${game.puzzle.size}, 1fr)`;
   board.style.gridTemplateRows = `repeat(${game.puzzle.size}, 1fr)`;
-  renderColorLegend();
 
   for (let r = 0; r < game.puzzle.size; r++) {
     for (let c = 0; c < game.puzzle.size; c++) {
@@ -211,22 +210,6 @@ function renderBoard() {
     }
   }
   renderCellContents();
-}
-
-function renderColorLegend() {
-  const legend = el("color-legend");
-  if (!legend) return;
-  const counts = new Map();
-  for (const row of game.puzzle.regions) {
-    for (const regionId of row) counts.set(regionId, (counts.get(regionId) ?? 0) + 1);
-  }
-  legend.innerHTML = "";
-  [...counts.entries()].sort(([a], [b]) => a - b).forEach(([regionId, cellCount]) => {
-    const item = document.createElement("span");
-    item.className = `color-legend-item region-${regionId}`;
-    item.innerHTML = `<span class="color-legend-swatch" aria-hidden="true"></span><span>Cor ${regionId + 1}: 1 gato (${cellCount} ${cellCount === 1 ? "casa" : "casas"})</span>`;
-    legend.appendChild(item);
-  });
 }
 
 function renderCellContents() {
